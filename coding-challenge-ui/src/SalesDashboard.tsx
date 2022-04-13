@@ -10,6 +10,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableFooter from "@mui/material/TableFooter";
 import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
+import TableSortLabel from '@mui/material/TableSortLabel';
 import Paper from "@mui/material/Paper";
 import IconButton from "@mui/material/IconButton";
 import FirstPageIcon from "@mui/icons-material/FirstPage";
@@ -27,6 +28,21 @@ interface TablePaginationActionsProps {
     newPage: number
   ) => void;
 }
+
+interface sale {
+  storeId: string,
+  marketplace: string,
+  country: string,
+  shopName: string,
+  Id: string,
+  orderId: string,
+  latest_ship_date: string,
+  shipment_status: string,
+  destination: string,
+  items: string,
+  orderValue: string
+}
+
 
 function TablePaginationActions(props: TablePaginationActionsProps) {
   const theme = useTheme();
@@ -98,7 +114,7 @@ function TablePaginationActions(props: TablePaginationActionsProps) {
   );
 }
 
-function getOverdueDayes(lastShipDate: any) {
+function getOverdueDayes(lastShipDate: string) {
   const todayMomemnt = moment();
   const lastShipDateMoment = moment(lastShipDate, "DD/MM/YYYY");
   const duration = moment.duration(todayMomemnt.diff(lastShipDateMoment));
@@ -106,7 +122,7 @@ function getOverdueDayes(lastShipDate: any) {
   return dayesOverDue;
 }
 
-const MarketplaceComponent = ({ countryCode, marketplace }: any) => {
+const MarketplaceComponent = ({ countryCode, marketplace }: { countryCode: string, marketplace: string }) => {
   return (
     <Box
       sx={{
@@ -130,12 +146,19 @@ export default function SalesTable({ salesData }: any) {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [pendingSales, setPendingSales] = React.useState([]);
+  const [order, setOrder] = React.useState<'asc' | 'desc'>('asc');
 
   React.useEffect(() => {
     setPendingSales(
-      salesData.filter((sale: any) => sale.shipment_status === "Pending")
-    );
-  }, [salesData]);
+      salesData.filter((sale: any) => sale.shipment_status === "Pending").sort(function(a:sale, b:sale) {
+        const shippingDateA = moment(a.latest_ship_date, "DD/MM/YYYY");
+        const shippingDateB = moment(b.latest_ship_date, "DD/MM/YYYY");
+        const timeDiff = shippingDateA.diff(shippingDateB);
+        return order === "asc" ? timeDiff: -timeDiff
+      }
+    ));
+  }, [salesData, order]);
+
 
   const columns = [
     "MARKETPLACE",
@@ -143,9 +166,9 @@ export default function SalesTable({ salesData }: any) {
     "ORDER ID",
     "ORDER VALUE",
     "ITEMS",
-    "DESTINATIO",
-    "DAYES OVERDUE",
+    "DESTINATION",
   ];
+
   const emptyRows =
     page > 0 ? Math.max(0, (1 + page) * rowsPerPage - pendingSales.length) : 0;
 
@@ -161,6 +184,10 @@ export default function SalesTable({ salesData }: any) {
   ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const changeOrder = () => { 
+    setOrder(order === "asc" ? "desc":"asc")
   };
 
   return (
@@ -180,16 +207,29 @@ export default function SalesTable({ salesData }: any) {
                 {column}
               </TableCell>
             ))}
+            <TableCell
+              align={"center"}
+              sx={{ fontWeight: "bold", bgcolor: "whitesmoke" }}
+              sortDirection={order}
+            >
+              {"DAYES OVERDUE"}
+              <TableSortLabel
+                active={true}
+                direction={order}
+                onClick={()=>changeOrder()}
+              >
+              </TableSortLabel>
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {(rowsPerPage > 0
             ? pendingSales.slice(
-                page * rowsPerPage,
-                page * rowsPerPage + rowsPerPage
-              )
+              page * rowsPerPage,
+              page * rowsPerPage + rowsPerPage
+            )
             : pendingSales
-          ).map((row: any) => (
+          ).map((row: sale) => (
             <TableRow key={row.Id}>
               <TableCell component="th" scope="row" sx={{ fontWeight: "bold" }}>
                 <MarketplaceComponent
@@ -206,7 +246,7 @@ export default function SalesTable({ salesData }: any) {
               <TableCell sx={{ fontWeight: "bold" }}>
                 {row.destination}
               </TableCell>
-              <TableCell sx={{ color: "red", fontWeight: "bold" }}>
+              <TableCell sx={{ color: "red", fontWeight: "bold" }} align="center">
                 {getOverdueDayes(row.latest_ship_date)}
               </TableCell>
             </TableRow>

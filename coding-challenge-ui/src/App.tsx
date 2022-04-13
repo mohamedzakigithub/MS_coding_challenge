@@ -31,7 +31,13 @@ const Main = styled.main`
   padding: 2rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-grow: 1;
+`;
+
+const ErrorWrapper = styled.h1`
+  color: red;
+  text-align: middle;
 `;
 
 interface User {
@@ -41,9 +47,24 @@ interface User {
   id: number;
 }
 
+interface sale {
+  storeId: string,
+  marketplace: string,
+  country: string,
+  shopName: string,
+  Id: string,
+  orderId: string,
+  latest_ship_date: string,
+  shipment_status: string,
+  destination: string,
+  items: string,
+  orderValue: string
+}
+
 const App = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [salesData, setSalesData] = useState([]);
+  const [salesData, setSalesData] = useState<sale[]>([]);
+  const [error, setError] = useState<string | null>(null)
 
   React.useEffect(() => {
     fetch("http://localhost:8080/user")
@@ -54,11 +75,21 @@ const App = () => {
   }, []);
 
   React.useEffect(() => {
-    fetch("http://localhost:8080/sales")
-      .then((results) => results.json())
-      .then((data) => {
-        setSalesData(data);
-      });
+    async function fetchSalesData() {
+      try {
+        const response = await fetch("http://localhost:8080/sales")
+        if (response.ok) {
+          const data = await response.json()
+          setSalesData(data);
+        } else {
+          const data = await response.json()
+          setError(data.error)
+        }
+      } catch (error: any) {
+        setError(error)
+      }
+    }
+    fetchSalesData()
   }, []);
 
   return (
@@ -69,7 +100,7 @@ const App = () => {
       </AppHeader>
       {/** Dashboard - new widgets go here */}
       <Main>
-        <SalesDashboard salesData={salesData ? salesData : []} />
+        {error ? <ErrorWrapper>{error}</ErrorWrapper> : <SalesDashboard salesData={salesData} />}
       </Main>
     </AppWrapper>
   );
